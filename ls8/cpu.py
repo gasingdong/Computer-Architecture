@@ -2,13 +2,17 @@
 
 import sys
 
+HALT = 0b00000001
+
 
 class CPU:
     """Main CPU class."""
 
     def __init__(self):
         """Construct a new CPU."""
-        pass
+        self.reg = [0] * 8
+        self.ram = [0] * 8
+        self.pc = 0
 
     def load(self):
         """Load a program into memory."""
@@ -24,12 +28,18 @@ class CPU:
             0b00001000,
             0b01000111,  # PRN R0
             0b00000000,
-            0b00000001,  # HLT
+            HALT,  # HLT
         ]
 
         for instruction in program:
             self.ram[address] = instruction
             address += 1
+
+    def ram_read(self, index):
+        return self.ram[index]
+
+    def ram_write(self, index, num):
+        self.ram[index] = num
 
     def alu(self, op, reg_a, reg_b):
         """ALU operations."""
@@ -62,4 +72,9 @@ class CPU:
 
     def run(self):
         """Run the CPU."""
-        pass
+        running = True
+        while running:
+            command = self.ram_read(self.pc)
+            if command == HALT:
+                running = False
+            self.pc += 1
