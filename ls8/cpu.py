@@ -3,6 +3,9 @@
 import sys
 
 HALT = 0b00000001
+LDI = 0b10000010
+PRN = 0b01000111
+NOP = 0b00000000
 
 
 class CPU:
@@ -23,11 +26,11 @@ class CPU:
 
         program = [
             # From print8.ls8
-            0b10000010,  # LDI R0,8
-            0b00000000,
+            LDI,  # LDI R0,8
+            NOP,
             0b00001000,
-            0b01000111,  # PRN R0
-            0b00000000,
+            PRN,  # PRN R0
+            NOP,
             HALT,  # HLT
         ]
 
@@ -77,4 +80,18 @@ class CPU:
             command = self.ram_read(self.pc)
             if command == HALT:
                 running = False
-            self.pc += 1
+                self.pc += 1
+            elif command == LDI:
+                num = self.ram_read(self.pc + 2)
+                reg_index = self.ram_read(self.pc + 1)
+                self.reg[reg_index] = num
+                self.pc += 3
+            elif command == PRN:
+                reg_index = self.ram_read(self.pc + 1)
+                print(self.reg[reg_index])
+                self.pc += 2
+            elif command == NOP:
+                self.pc += 1
+            else:
+                print(f"Unknown instruction: {command}")
+                sys.exit(1)
