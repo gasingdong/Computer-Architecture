@@ -73,6 +73,9 @@ class CPU:
 
         print()
 
+    def next_instruction(self, opcode):
+        self.pc += (opcode >> 6 & 0b11) + 1
+
     def run(self):
         """Run the CPU."""
         running = True
@@ -80,18 +83,14 @@ class CPU:
             command = self.ram_read(self.pc)
             if command == HALT:
                 running = False
-                self.pc += 1
             elif command == LDI:
                 num = self.ram_read(self.pc + 2)
                 reg_index = self.ram_read(self.pc + 1)
                 self.reg[reg_index] = num
-                self.pc += 3
             elif command == PRN:
                 reg_index = self.ram_read(self.pc + 1)
                 print(self.reg[reg_index])
-                self.pc += 2
-            elif command == NOP:
-                self.pc += 1
-            else:
+            elif command != NOP:
                 print(f"Unknown instruction: {command}")
                 sys.exit(1)
+            self.next_instruction(command)
