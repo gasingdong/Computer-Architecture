@@ -6,6 +6,7 @@ HALT = 0b00000001
 LDI = 0b10000010
 PRN = 0b01000111
 NOP = 0b00000000
+MULT = 0b10100010
 
 
 class CPU:
@@ -14,25 +15,23 @@ class CPU:
     def __init__(self):
         """Construct a new CPU."""
         self.reg = [0] * 8
-        self.ram = [0] * 8
-        self.pc = 0
+        self.ram = [0] * 64
 
-    def load(self):
+    def load(self, file):
         """Load a program into memory."""
 
         address = 0
 
         # For now, we've just hardcoded a program:
 
-        program = [
-            # From print8.ls8
-            LDI,  # LDI R0,8
-            NOP,
-            0b00001000,
-            PRN,  # PRN R0
-            NOP,
-            HALT,  # HLT
-        ]
+        program = []
+
+        with open(file) as f:
+            for line in f:
+                line = line.partition('#')[0]
+                line = line.rstrip()
+                if line:
+                    program.append(int(str.encode(line), 2))
 
         for instruction in program:
             self.ram[address] = instruction
@@ -74,23 +73,29 @@ class CPU:
         print()
 
     def next_instruction(self, opcode):
-        self.pc += (opcode >> 6 & 0b11) + 1
+        return (opcode >> 6 & 0b11) + 1
 
     def run(self):
         """Run the CPU."""
         running = True
+        pc = 0
         while running:
-            command = self.ram_read(self.pc)
+            command = self.ram_read(pc)
             if command == HALT:
                 running = False
             elif command == LDI:
-                num = self.ram_read(self.pc + 2)
-                reg_index = self.ram_read(self.pc + 1)
+                reg_index = self.ram_read(pc + 1)
+                num = self.ram_read(pc + 2)
                 self.reg[reg_index] = num
             elif command == PRN:
-                reg_index = self.ram_read(self.pc + 1)
+                reg_index = self.ram_read(pc + 1)
                 print(self.reg[reg_index])
+            elif command == MULT:
+                reg_index = self.ram_read(pc + 1)
+                multiplier = self.ram_read(pc + 2)
+                self.reg[reg_index] = self.reg[reg_index] * \
+                    self.reg[multiplier]
             elif command != NOP:
                 print(f"Unknown instruction: {command}")
                 sys.exit(1)
-            self.next_instruction(command)
+            pc += self.next_instruction(command)
