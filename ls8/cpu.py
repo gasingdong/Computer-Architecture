@@ -16,6 +16,36 @@ class CPU:
         """Construct a new CPU."""
         self.reg = [0] * 8
         self.ram = [0] * 64
+        self.branchtable = {}
+        self.branchtable[HALT] = self.halt
+        self.branchtable[LDI] = self.ldi
+        self.branchtable[PRN] = self.prn
+        self.branchtable[NOP] = self.nop
+        self.branchtable[MULT] = self.mult
+
+    def halt(self, pc):
+        return False
+
+    def ldi(self, pc):
+        reg_index = self.ram_read(pc + 1)
+        num = self.ram_read(pc + 2)
+        self.reg[reg_index] = num
+        return True
+
+    def prn(self, pc):
+        reg_index = self.ram_read(pc + 1)
+        print(self.reg[reg_index])
+        return True
+
+    def nop(self, pc):
+        return True
+
+    def mult(self, pc):
+        reg_index = self.ram_read(pc + 1)
+        multiplier = self.ram_read(pc + 2)
+        self.reg[reg_index] = self.reg[reg_index] * \
+            self.reg[multiplier]
+        return True
 
     def load(self, file):
         """Load a program into memory."""
@@ -68,7 +98,7 @@ class CPU:
 
         print()
 
-    def next_instruction(self, opcode):
+    def increment(self, opcode):
         return (opcode >> 6 & 0b11) + 1
 
     def run(self):
@@ -77,21 +107,9 @@ class CPU:
         pc = 0
         while running:
             command = self.ram_read(pc)
-            if command == HALT:
-                running = False
-            elif command == LDI:
-                reg_index = self.ram_read(pc + 1)
-                num = self.ram_read(pc + 2)
-                self.reg[reg_index] = num
-            elif command == PRN:
-                reg_index = self.ram_read(pc + 1)
-                print(self.reg[reg_index])
-            elif command == MULT:
-                reg_index = self.ram_read(pc + 1)
-                multiplier = self.ram_read(pc + 2)
-                self.reg[reg_index] = self.reg[reg_index] * \
-                    self.reg[multiplier]
-            elif command != NOP:
+            if command in self.branchtable:
+                running = self.branchtable[command](pc)
+                pc += self.increment(command)
+            else:
                 print(f"Unknown instruction: {command}")
                 sys.exit(1)
-            pc += self.next_instruction(command)
