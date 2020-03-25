@@ -7,6 +7,10 @@ LDI = 0b10000010
 PRN = 0b01000111
 NOP = 0b00000000
 MULT = 0b10100010
+POP = 0b01000110
+PUSH = 0b01000101
+
+SP = 7
 
 
 class CPU:
@@ -15,37 +19,46 @@ class CPU:
     def __init__(self):
         """Construct a new CPU."""
         self.reg = [0] * 8
-        self.ram = [0] * 64
+        self.ram = [0] * 256
+        self.pc = 0
         self.branchtable = {}
-        self.branchtable[HALT] = self.halt
-        self.branchtable[LDI] = self.ldi
-        self.branchtable[PRN] = self.prn
-        self.branchtable[NOP] = self.nop
-        self.branchtable[MULT] = self.mult
+        self.add_branch(HALT, self.halt)
+        self.add_branch(LDI, self.ldi)
+        self.add_branch(PRN, self.prn)
+        self.add_branch(NOP, self.nop)
+        self.add_branch(MULT, self.mult)
+        self.add_branch(POP, self.pop)
+        self.add_branch(PUSH, self.push)
 
-    def halt(self, pc):
-        return False
+    def add_branch(self, opcode, handler):
+        self.branchtable[opcode] = handler
 
-    def ldi(self, pc):
-        reg_index = self.ram_read(pc + 1)
-        num = self.ram_read(pc + 2)
+    def pop(self):
+        pass
+
+    def push(self):
+        pass
+
+    def halt(self):
+        return True
+
+    def ldi(self):
+        reg_index = self.ram_read(self.pc + 1)
+        num = self.ram_read(self.pc + 2)
         self.reg[reg_index] = num
-        return True
 
-    def prn(self, pc):
-        reg_index = self.ram_read(pc + 1)
+    def prn(self):
+        reg_index = self.ram_read(self.pc + 1)
         print(self.reg[reg_index])
-        return True
 
-    def nop(self, pc):
-        return True
+    def nop(self):
+        pass
 
-    def mult(self, pc):
-        reg_index = self.ram_read(pc + 1)
-        multiplier = self.ram_read(pc + 2)
+    def mult(self):
+        reg_index = self.ram_read(self.pc + 1)
+        multiplier = self.ram_read(self.pc + 2)
         self.reg[reg_index] = self.reg[reg_index] * \
             self.reg[multiplier]
-        return True
 
     def load(self, file):
         """Load a program into memory."""
@@ -101,15 +114,21 @@ class CPU:
     def increment(self, opcode):
         return (opcode >> 6 & 0b11) + 1
 
+    def run_op(self, opcode):
+        if not self.branchtable[opcode]():
+            self.pc += self.increment(opcode)
+            return False
+        else:
+            return True
+
     def run(self):
         """Run the CPU."""
-        running = True
-        pc = 0
-        while running:
-            command = self.ram_read(pc)
+        stop = False
+        self.pc = 0
+        while not stop:
+            command = self.ram_read(self.pc)
             if command in self.branchtable:
-                running = self.branchtable[command](pc)
-                pc += self.increment(command)
+                stop = self.run_op(command)
             else:
                 print(f"Unknown instruction: {command}")
                 sys.exit(1)
