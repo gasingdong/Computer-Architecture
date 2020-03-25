@@ -19,11 +19,7 @@ class CPU:
 
     def load(self, file):
         """Load a program into memory."""
-
         address = 0
-
-        # For now, we've just hardcoded a program:
-
         program = []
 
         with open(file) as f:
