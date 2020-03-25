@@ -34,10 +34,16 @@ class CPU:
         self.branchtable[opcode] = handler
 
     def pop(self):
-        pass
+        reg_index = self.ram_read(self.pc + 1)
+        num = self.ram_read(self.reg[SP])
+        self.reg[reg_index] = num
+        self.reg[SP] += 1
 
     def push(self):
-        pass
+        reg_index = self.ram_read(self.pc + 1)
+        num = self.reg[reg_index]
+        self.reg[SP] -= 1
+        self.ram_write(self.reg[SP], num)
 
     def halt(self):
         return True
