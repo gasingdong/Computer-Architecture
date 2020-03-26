@@ -9,6 +9,9 @@ NOP = 0b00000000
 MULT = 0b10100010
 POP = 0b01000110
 PUSH = 0b01000101
+CALL = 0b01010000
+RET = 0b00010001
+ADD = 0b10100000
 
 SP = 7
 
@@ -27,11 +30,24 @@ class CPU:
         self.add_branch(PRN, self.prn)
         self.add_branch(NOP, self.nop)
         self.add_branch(MULT, self.mult)
+        self.add_branch(ADD, self.add)
         self.add_branch(POP, self.pop)
         self.add_branch(PUSH, self.push)
+        self.add_branch(CALL, self.call)
+        self.add_branch(RET, self.ret)
 
     def add_branch(self, opcode, handler):
         self.branchtable[opcode] = handler
+
+    def call(self):
+        self.reg[SP] -= 1
+        self.ram_write(self.reg[SP], self.pc + 2)
+        num = self.ram_read(self.pc + 1)
+        self.pc = self.reg[num]
+
+    def ret(self):
+        self.pc = self.ram_read(self.reg[SP])
+        self.reg[SP] += 1
 
     def pop(self):
         reg_index = self.ram_read(self.pc + 1)
@@ -60,11 +76,12 @@ class CPU:
     def nop(self):
         pass
 
+    def add(self):
+        self.alu("ADD", self.ram_read(self.pc + 1), self.ram_read(self.pc + 2))
+
     def mult(self):
-        reg_index = self.ram_read(self.pc + 1)
-        multiplier = self.ram_read(self.pc + 2)
-        self.reg[reg_index] = self.reg[reg_index] * \
-            self.reg[multiplier]
+        self.alu("MULT", self.ram_read(self.pc + 1),
+                 self.ram_read(self.pc + 2))
 
     def load(self, file):
         """Load a program into memory."""
@@ -93,7 +110,8 @@ class CPU:
 
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
-        # elif op == "SUB": etc
+        elif op == "MULT":
+            self.reg[reg_a] *= self.reg[reg_b]
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -117,15 +135,11 @@ class CPU:
 
         print()
 
+    def sets_pc(self, opcode):
+        return (opcode >> 4 & 1)
+
     def increment(self, opcode):
         return (opcode >> 6 & 0b11) + 1
-
-    def run_op(self, opcode):
-        if not self.branchtable[opcode]():
-            self.pc += self.increment(opcode)
-            return False
-        else:
-            return True
 
     def run(self):
         """Run the CPU."""
@@ -134,7 +148,9 @@ class CPU:
         while not stop:
             command = self.ram_read(self.pc)
             if command in self.branchtable:
-                stop = self.run_op(command)
+                stop = self.branchtable[command]()
+                if not self.sets_pc(command):
+                    self.pc += self.increment(command)
             else:
                 print(f"Unknown instruction: {command}")
                 sys.exit(1)
